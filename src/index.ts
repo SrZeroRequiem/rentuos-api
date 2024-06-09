@@ -61,21 +61,21 @@ app.get('/districts', (_req: Request, res: Response) => {
 app.get('/:city/districts', (req: Request, res: Response) => {
   const cityData: Location[] = getCity(req.params.city);
   cityData.length > 0
-    ? res.json(cityData.map((loc: Location) => loc.district)).status(200)
-    : res.sendStatus(404);
+    ? res.json(cityData.map((loc: Location) => loc.district))
+    : res.status(404).json({ error: `City (${req.params.city}) not found` });
 });
 
 app.get('/:city', (req: Request, res: Response) => {
   const cityData: Location[] = getCity(req.params.city);
   if (cityData.length > 0) {
     const cityUnits: number = cityData.reduce((acc: number, loc: Location) => acc + loc.units, 0);
-    const cityUnitsData: CityData = { city: req.params.city, units: cityUnits };
+    const cityUnitsData: CityData = { city: cityData[0].city, units: cityUnits };
     res.json(cityUnitsData).status(200);
   } else {
     const districtData: DistrictData | null = getDistrict(req.params.city);
     districtData
-      ? res.json({ city: districtData.city, district: districtData.district, units: districtData.units }).status(200)
-      : res.sendStatus(404);
+      ? res.json({ city: districtData.city, district: districtData.district, units: districtData.units })
+      : res.status(404).json({ error: `City or District (${req.params.city}) not found` });
   }
 });
 
@@ -131,6 +131,11 @@ app.get('/search/:query', (req: Request, res: Response) => {
   );
 
   results.length > 0 ? res.status(200).json(results) : res.status(404).json({ found: false, rate:null, name: null, city: null, type: null });
+});
+
+// Not found
+app.use((_req: Request, res: Response) => {
+  res.status(404).json({ error: "Endpoint not found" });
 });
 
 // Error handling
