@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction} from 'express';
 import cors from 'cors';
 import { locations} from './locations';
 
@@ -21,10 +21,10 @@ interface DistrictData {
 
 interface SearchResult {
   found: boolean;
-  rate: number;
+  rate: number | null;
   name: string | null;
   city: string | null;
-  type: string;
+  type: string | null;
 }
 
 const app = express();
@@ -102,7 +102,7 @@ app.get('/search/:query', (req: Request, res: Response) => {
         const rate = Math.min(word.length / (normalizedCity.replace(" ","").length), (normalizedCity.replace(" ","").length) / word.length);
         cityResult = {
           found: true,
-          rate: cityResult.rate + rate,
+          rate: (cityResult.rate || 0) + rate,
           name: loc.city,
           city: loc.city,
           type: 'CITY',
@@ -113,7 +113,7 @@ app.get('/search/:query', (req: Request, res: Response) => {
         const rate = Math.min(word.length / (normalizedDistrict.replace(" ","").length), (normalizedCity.replace(" ","").length) / word.length);
         districtResult = {
           found: true,
-          rate: districtResult.rate + rate,
+          rate: (districtResult.rate||0) + rate,
           name: loc.district,
           city: loc.city,
           type: 'DISTRICT',
@@ -125,7 +125,7 @@ app.get('/search/:query', (req: Request, res: Response) => {
 
   });
 
-  results.sort((a, b) => b.rate - a.rate);
+  results.sort((a, b) => (b.rate||0) - (a.rate||0));
   results = results.filter((res, index, self) =>
     index === self.findIndex((r) => r.name === res.name)
   );
@@ -133,6 +133,11 @@ app.get('/search/:query', (req: Request, res: Response) => {
   results.length > 0 ? res.status(200).json(results) : res.status(404).json({ found: false, rate:null, name: null, city: null, type: null });
 });
 
+// Error handling
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Internal Server Error' });
+});
+
 // Start server
 app.listen(port, () => console.log(`API listening at http://localhost:${port}`));
-
