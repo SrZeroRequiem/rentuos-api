@@ -32,7 +32,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const port: number = parseInt(process.env.PORT || '3000');
+const port: number = parseInt(process.env.PORT || '3001');
 
 // Helper functions
 const normalizeString = (str: string): string => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -69,9 +69,10 @@ app.get('/:city', (req: Request, res: Response) => {
   const cityData: Location[] = getCity(req.params.city);
   if (cityData.length > 0) {
     const cityUnits: number = cityData.reduce((acc: number, loc: Location) => acc + loc.units, 0);
-    res.json({ city: req.params.city, units: cityUnits }).status(200);
+    const cityUnitsData: CityData = { city: req.params.city, units: cityUnits };
+    res.json(cityUnitsData).status(200);
   } else {
-    const districtData: Location | null = getDistrict(req.params.city);
+    const districtData: DistrictData | null = getDistrict(req.params.city);
     districtData
       ? res.json({ city: districtData.city, district: districtData.district, units: districtData.units }).status(200)
       : res.sendStatus(404);
@@ -98,10 +99,10 @@ app.get('/search/:query', (req: Request, res: Response) => {
 
     queryWords.forEach((word: string) => {
       if (normalizedCity.includes(word) || word.includes(normalizedCity)) {
-        const rate = Math.min(word.length / (loc.district.length-1), (loc.district.length-1) / word.length);
+        const rate = Math.min(word.length / (normalizedCity.replace(" ","").length), (normalizedCity.replace(" ","").length) / word.length);
         cityResult = {
           found: true,
-          rate: districtResult.rate + rate,
+          rate: cityResult.rate + rate,
           name: loc.city,
           city: loc.city,
           type: 'CITY',
@@ -109,7 +110,7 @@ app.get('/search/:query', (req: Request, res: Response) => {
       }
 
       if (normalizedDistrict.includes(word) || word.includes(normalizedDistrict)) {
-        const rate = Math.min(word.length / (loc.district.length-1), (loc.district.length-1) / word.length);
+        const rate = Math.min(word.length / (normalizedDistrict.replace(" ","").length), (normalizedCity.replace(" ","").length) / word.length);
         districtResult = {
           found: true,
           rate: districtResult.rate + rate,
@@ -134,3 +135,4 @@ app.get('/search/:query', (req: Request, res: Response) => {
 
 // Start server
 app.listen(port, () => console.log(`API listening at http://localhost:${port}`));
+
